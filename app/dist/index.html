@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="زاد وفحم - تجربة اللهب الأصيل. أصل الشاورما على الجمر، ملك المشويات البلدية في العقبة" />
+    <meta name="keywords" content="شاورما, مشويات, مطعم, العقبة, زاد وفحم, كباب, شيش طاووق" />
+    <meta name="author" content="زاد وفحم" />
+    <meta name="theme-color" content="#FF4D00" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="زاد وفحم - تجربة اللهب الأصيل" />
+    <meta property="og:description" content="أصل الشاورما على الجمر، ملك المشويات البلدية" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Particles.js -->
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    
+    <title>زاد وفحم - تجربة اللهب الأصيل</title>
+    
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Cairo', sans-serif;
+        background-color: #050505;
+        color: white;
+        overflow-x: hidden;
+      }
+      
+      /* Loading Screen */
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        background: #050505;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+      
+      #loading-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+      
+      .loading-content {
+        text-align: center;
+      }
+      
+      .loading-flame {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        position: relative;
+      }
+      
+      .loading-flame::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, #FFD700, #FF4D00, #FF2200);
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        animation: flame 1s ease-in-out infinite alternate;
+      }
+      
+      .loading-flame::after {
+        content: '';
+        position: absolute;
+        inset: 10px;
+        background: #050505;
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      }
+      
+      @keyframes flame {
+        0% { transform: scale(1) rotate(-2deg); }
+        100% { transform: scale(1.1) rotate(2deg); }
+      }
+      
+      .loading-text {
+        font-family: 'Reem Kufi', sans-serif;
+        font-size: 2rem;
+        color: #FF4D00;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-OXwZ6Auq.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DhDqpwCQ.css">
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-content">
+        <div class="loading-flame"></div>
+        <p class="loading-text">زاد وفحم</p>
+      </div>
+    </div>
+    
+    <div id="root"></div>
+    
+    <script>
+      // Hide loading screen when app is ready
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.getElementById('loading-screen').classList.add('hidden');
+        }, 1500);
+      });
+    </script>
+  </body>
+</html>
