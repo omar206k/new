@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#06070a">
+<title>🎮 Remote Pro — تحكم عن بعد</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM
+   ═══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#06070a;--bg2:#0c0c14;--bg3:#13131e;--bg4:#1a1a2a;
+  --accent:#00ff88;--accent-glow:#00ff8850;
+  --accent2:#00ccff;--accent2-glow:#00ccff50;
+  --text:#f0f0f5;--text2:#a0a0b8;--text3:#606080;
+  --border:#2a2a3c;--border2:#353550;
+  --red:#ff4455;--red-glow:#ff445540;
+  --green:#00e676;--green-glow:#00e67640;
+  --yellow:#ffcc00;
+  --r:18px;--r-sm:14px;--r-lg:22px;
+  --font:'Cairo',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html{height:100%;font-size:16px}
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100%;
+  min-height:100dvh;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  overflow-x:hidden;
+  background:radial-gradient(ellipse at 50% 0%,rgba(0,255,136,.06) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 80%,rgba(0,204,255,.04) 0%,transparent 50%),
+             var(--bg);
+}
+
+/* ═══════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════ */
+.header{
+  padding:16px 20px 12px;
+  background:linear-gradient(180deg,rgba(12,12,20,.98) 0%,rgba(12,12,20,.9) 100%);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.header-brand{display:flex;align-items:center;gap:10px}
+.header-icon{
+  width:38px;height:38px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:11px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;box-shadow:0 0 15px var(--accent-glow);
+}
+.header-title{font-size:16px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-sub{font-size:10px;color:var(--text3);margin-top:1px;font-weight:500}
+.conn-badge{
+  display:flex;align-items:center;gap:7px;
+  background:var(--bg3);padding:6px 12px;border-radius:20px;border:1px solid var(--border);
+  font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;
+  transition:all .3s;
+}
+.conn-badge:active{transform:scale(.96)}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:all .3s}
+.conn-dot.connected{background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:conn-pulse 2s ease-in-out infinite}
+.conn-dot.error{background:var(--red);box-shadow:0 0 8px var(--red-glow)}
+@keyframes conn-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+
+/* ═══════════════════════════════════════════
+   MAIN CONTENT
+   ═══════════════════════════════════════════ */
+.content{
+  flex:1;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  max-width:460px;
+  width:100%;
+  margin:0 auto;
+}
+
+/* ═══════════════════════════════════════════
+   STATUS TOAST
+   ═══════════════════════════════════════════ */
+.toast{
+  padding:12px 16px;border-radius:var(--r-sm);
+  font-size:13px;font-weight:700;
+  display:none;align-items:center;gap:10px;
+  transition:all .3s;
+}
+.toast.success{
+  background:linear-gradient(135deg,rgba(0,230,118,.12),rgba(0,255,136,.08));
+  border:1px solid rgba(0,255,136,.3);color:var(--green);display:flex;
+}
+.toast.error{
+  background:linear-gradient(135deg,rgba(255,68,85,.12),rgba(255,68,85,.08));
+  border:1px solid rgba(255,68,85,.3);color:var(--red);display:flex;
+}
+.toast i{font-size:15px;flex-shrink:0}
+
+/* ═══════════════════════════════════════════
+   CONNECT SECTION
+   ═══════════════════════════════════════════ */
+.connect-section{
+  background:linear-gradient(135deg,rgba(12,12,18,.9),rgba(19,19,29,.85));
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:20px;position:relative;overflow:hidden;
+}
+.connect-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.section-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1.5px;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.section-title i{color:var(--accent);font-size:12px}
+.input-row{display:flex;gap:10px}
+.ip-input{
+  flex:1;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);
+  background:var(--bg2);color:var(--text);font-size:16px;font-family:var(--font);
+  text-align:center;font-weight:700;letter-spacing:.5px;
+  transition:all .3s;outline:none;-webkit-appearance:none;
+}
+.ip-input:focus{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow);background:var(--bg3)}
+.ip-input::placeholder{color:var(--text3);font-weight:500;font-size:14px}
+.connect-btn{
+  padding:13px 20px;border:none;border-radius:var(--r-sm);
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#000;font-size:14px;font-weight:800;cursor:pointer;
+  transition:all .3s;display:flex;align-items:center;gap:7px;
+  font-family:var(--font);box-shadow:0 4px 20px var(--accent-glow);
+  white-space:nowrap;flex-shrink:0;
+}
+.connect-btn:active{transform:scale(.95);box-shadow:0 2px 10px var(--accent-glow)}
+.connect-btn.connected-state{background:linear-gradient(135deg,var(--green),#00cc60);box-shadow:0 4px 20px var(--green-glow)}
+
+/* ═══════════════════════════════════════════
+   CONTROL SECTIONS
+   ═══════════════════════════════════════════ */
+.ctrl-section{
+  background:linear-gradient(135deg,rgba(12,12,18,.9),rgba(19,19,29,.85));
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:18px;position:relative;overflow:hidden;
+}
+.ctrl-section::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
+
+/* ═══════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════ */
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.action-btn{
+  position:relative;overflow:hidden;
+  padding:0;border:none;border-radius:var(--r-sm);
+  cursor:pointer;transition:all .25s cubic-bezier(.175,.885,.32,1.275);
+  box-shadow:0 6px 20px rgba(0,0,0,.35);
+  font-family:var(--font);
+  min-height:80px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  -webkit-touch-callout:none;user-select:none;
+}
+.action-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.15));opacity:0;transition:opacity .2s}
+.action-btn:hover::before{opacity:1}
+.action-btn:active{transform:scale(.93)!important;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.action-btn span{font-size:13px;font-weight:800;letter-spacing:.3px}
+.action-btn i{font-size:22px}
+
+/* Slide buttons */
+.btn-slide{background:linear-gradient(135deg,#1a4fe0,#0abde3);color:#fff}
+.btn-slide:active{box-shadow:0 2px 15px rgba(26,79,224,.4)!important}
+
+/* Volume buttons */
+.btn-vol{background:linear-gradient(135deg,#e05a1a,#f9b234);color:#fff}
+.btn-vol:active{box-shadow:0 2px 15px rgba(224,90,26,.4)!important}
+
+/* Play/Pause — full width */
+.btn-play{
+  width:100%;min-height:70px;flex-direction:row;gap:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;
+  border-radius:var(--r-sm);border:none;padding:0 24px;
+  font-size:17px;font-weight:900;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 25px var(--accent-glow);
+  transition:all .25s cubic-bezier(.175,.885,.32,1.275);
+  font-family:var(--font);position:relative;overflow:hidden;
+  -webkit-touch-callout:none;user-select:none;
+}
+.btn-play::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.2));opacity:0;transition:opacity .2s}
+.btn-play:hover::before{opacity:1}
+.btn-play:active{transform:scale(.95);box-shadow:0 3px 15px var(--accent-glow)}
+.btn-play i{font-size:24px}
+
+/* Fullscreen & Mute — secondary row */
+.btn-secondary{
+  background:linear-gradient(135deg,var(--bg3),var(--bg4));
+  border:1.5px solid var(--border2);color:var(--text2);
+}
+.btn-secondary:hover{border-color:var(--accent);color:var(--text)}
+
+/* ═══════════════════════════════════════════
+   SWIPE HINT
+   ═══════════════════════════════════════════ */
+.swipe-hint{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:12px 16px;border-radius:var(--r-sm);
+  background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,204,255,.04));
+  border:1px solid rgba(0,255,136,.15);
+  font-size:12px;color:var(--text3);font-weight:600;
+}
+.swipe-hint i{color:var(--accent2)}
+
+/* ═══════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ═══════════════════════════════════════════ */
+.shortcuts-row{
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+  padding:10px 0;
+}
+.key-badge{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:8px;
+  background:var(--bg3);border:1px solid var(--border2);
+  font-family:var(--mono);font-size:10px;color:var(--text3);font-weight:600;
+}
+.key-badge i{font-size:10px;color:var(--accent2)}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════ */
+.footer{
+  padding:14px 20px;
+  text-align:center;
+  font-size:11px;
+  color:var(--text3);
+  font-weight:500;
+  border-top:1px solid var(--border);
+  margin-top:auto;
+}
+.footer span{color:var(--accent2)}
+
+/* ═══════════════════════════════════════════
+   FEEDBACK PULSE ON BUTTONS
+   ═══════════════════════════════════════════ */
+@keyframes btn-pulse{
+  0%{box-shadow:0 0 0 0 var(--pulse-color)}
+  70%{box-shadow:0 0 0 14px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+.pulse-anim{animation:btn-pulse .5s ease-out forwards}
+
+/* ═══════════════════════════════════════════
+   SWIPE INDICATOR OVERLAY
+   ═══════════════════════════════════════════ */
+.swipe-overlay{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(10px);
+  z-index:100;opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.swipe-overlay.show{opacity:1}
+.swipe-icon{font-size:80px;animation:swipe-bounce .3s ease-out}
+@keyframes swipe-bounce{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* ═══════════════════════════════════════════
+   SCROLL */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ════════════ HEADER ════════════ -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-icon">🎮</div>
+    <div>
+      <div class="header-title">Remote Pro</div>
+      <div class="header-sub">تحكم في الشرائح والصوت</div>
+    </div>
+  </div>
+  <div class="conn-badge" onclick="reconnect()">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connText">غير متصل</span>
+  </div>
+</header>
+
+<!-- ════════════ CONTENT ════════════ -->
+<div class="content">
+
+  <!-- Status Toast -->
+  <div class="toast" id="toast"><i id="toastIcon" class="fas fa-circle-info"></i><span id="toastMsg"></span></div>
+
+  <!-- Connect Section -->
+  <div class="connect-section">
+    <div class="section-title"><i class="fas fa-link"></i> الاتصال بالجهاز</div>
+    <div class="input-row">
+      <input type="text" class="ip-input" id="serverIp"
+        placeholder="192.168.1.100"
+        inputmode="decimal"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false">
+      <button class="connect-btn" id="connectBtn" onclick="connectServer()">
+        <i class="fas fa-link"></i> ربط
+      </button>
+    </div>
+  </div>
+
+  <!-- Slides Section -->
+  <div class="ctrl-section">
+    <div class="section-title"><i class="fas fa-desktop"></i> الشرائح</div>
+    <div class="btn-grid">
+      <button class="action-btn btn-slide" onclick="sendCmd('prev_slide')" id="btn-prev">
+        <i class="fas fa-backward-step"></i>
+        <span>شريحة سابقة</span>
+      </button>
+      <button class="action-btn btn-slide" onclick="sendCmd('next_slide')" id="btn-next">
+        <i class="fas fa-forward-step"></i>
+        <span>شريحة تالية</span>
+      </button>
+      <button class="action-btn btn-secondary" onclick="sendCmd('start_presentation')">
+        <i class="fas fa-play-circle" style="color:var(--accent)"></i>
+        <span>بدء العرض</span>
+      </button>
+      <button class="action-btn btn-secondary" onclick="sendCmd('end_presentation')">
+        <i class="fas fa-stop-circle" style="color:var(--red)"></i>
+        <span>إنهاء العرض</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Play/Pause -->
+  <button class="btn-play" onclick="sendCmd('play_pause')" id="btn-play">
+    <i class="fas fa-play-circle"></i>
+    <span>تشغيل / إيقاف</span>
+  </button>
+
+  <!-- Volume Section -->
+  <div class="ctrl-section">
+    <div class="section-title"><i class="fas fa-volume-high"></i> الصوت</div>
+    <div class="btn-grid">
+      <button class="action-btn btn-vol" onclick="sendCmd('volume_up')" id="btn-vup">
+        <i class="fas fa-volume-high"></i>
+        <span>رفع الصوت</span>
+      </button>
+      <button class="action-btn btn-vol" onclick="sendCmd('volume_down')" id="btn-vdown">
+        <i class="fas fa-volume-low"></i>
+        <span>خفض الصوت</span>
+      </button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="action-btn btn-secondary" onclick="sendCmd('mute')" style="width:100%;min-height:56px;flex-direction:row;gap:10px">
+        <i class="fas fa-volume-xmark" style="font-size:18px;color:var(--accent2)"></i>
+        <span>كتم الصوت</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Extra Controls -->
+  <div class="ctrl-section">
+    <div class="section-title"><i class="fas fa-sliders"></i> تحكم إضافي</div>
+    <div class="btn-grid">
+      <button class="action-btn btn-secondary" onclick="sendCmd('fullscreen')">
+        <i class="fas fa-expand" style="color:var(--accent4,#c77dff)"></i>
+        <span>شاشة كاملة</span>
+      </button>
+      <button class="action-btn btn-secondary" onclick="sendCmd('screenshot')">
+        <i class="fas fa-camera" style="color:var(--yellow)"></i>
+        <span>لقطة شاشة</span>
+      </button>
+      <button class="action-btn btn-secondary" onclick="sendCmd('zoom_in')">
+        <i class="fas fa-magnifying-glass-plus" style="color:var(--accent)"></i>
+        <span>تكبير</span>
+      </button>
+      <button class="action-btn btn-secondary" onclick="sendCmd('zoom_out')">
+        <i class="fas fa-magnifying-glass-minus" style="color:var(--accent2)"></i>
+        <span>تصغير</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Swipe Hint -->
+  <div class="swipe-hint">
+    <i class="fas fa-hand-pointer"></i>
+    <span>اسحب يساراً/يميناً للتنقل بين الشرائح</span>
+  </div>
+
+  <!-- Keyboard Shortcuts (for desktop use) -->
+  <div class="shortcuts-row">
+    <div class="key-badge"><i class="fas fa-arrow-left"></i> سابقة</div>
+    <div class="key-badge"><i class="fas fa-arrow-right"></i> تالية</div>
+    <div class="key-badge"><i class="fas fa-arrow-up"></i> صوت +</div>
+    <div class="key-badge"><i class="fas fa-arrow-down"></i> صوت -</div>
+    <div class="key-badge"><span>Space</span> تشغيل</div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">HandController Pro v4.0 — <span>Remote Control</span></div>
+
+<!-- Swipe Overlay -->
+<div class="swipe-overlay" id="swipeOverlay">
+  <div class="swipe-icon" id="swipeIcon">▶</div>
+</div>
+
+<!-- ════════════ JAVASCRIPT ════════════ -->
+<script>
+// ═════════════════════════════════════════
+//  STATE
+// ═════════════════════════════════════════
+let serverUrl = '';
+let socket = null;
+let isConnected = false;
+
+// Auto-detect server from URL (when served by Flask)
+(function autoDetect() {
+  const h = window.location.hostname;
+  if (h && h !== '') {
+    document.getElementById('serverIp').value = h;
+  }
+})();
+
+// ═════════════════════════════════════════
+//  TOAST
+// ═════════════════════════════════════════
+let _toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  const i = document.getElementById('toastIcon');
+  const m = document.getElementById('toastMsg');
+  m.textContent = msg;
+  i.className = 'fas ' + (isError ? 'fa-circle-xmark' : 'fa-circle-check');
+  t.className = 'toast ' + (isError ? 'error' : 'success');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+  if (!isError && 'vibrate' in navigator) navigator.vibrate(50);
+}
+
+// ═════════════════════════════════════════
+//  CONNECTION
+// ═════════════════════════════════════════
+async function connectServer() {
+  const ip = document.getElementById('serverIp').value.trim();
+  if (!ip) { showToast('أدخل IP الجهاز أولاً', true); return; }
+
+  serverUrl = ip.includes(':') ? ip : `${ip}:5000`;
+  const btn = document.getElementById('connectBtn');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`http://${serverUrl}/check`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
+    const serverIp = data.ip || serverUrl.split(':')[0];
+    serverUrl = `${serverIp}:5000`;
+
+    // Update UI
+    setConnected(true);
+    showToast(`✅ متصل بـ ${serverIp}:5000`);
+
+    // WebSocket
+    initWebSocket(`http://${serverIp}:5000`);
+
+    // Save IP
+    try { localStorage.setItem('remote_last_ip', serverIp); } catch(e) {}
+
+  } catch (e) {
+    setConnected(false);
+    showToast('فشل الاتصال — تحقق من IP والشبكة', true);
+  } finally {
+    btn.innerHTML = '<i class="fas fa-link"></i> ربط';
+    btn.disabled = false;
+  }
+}
+
+function reconnect() {
+  if (serverUrl) {
+    setConnected(false);
+    connectServer();
+  }
+}
+
+function initWebSocket(url) {
+  if (socket) { try { socket.disconnect(); } catch(e) {} }
+  socket = io(url, { timeout: 4000, reconnection: true, transports: ['websocket', 'polling'] });
+
+  socket.on('connect', () => {
+    isConnected = true;
+    setConnected(true);
+    showToast('⚡ اتصال مباشر — سرعة فائقة!');
+  });
+  socket.on('disconnect', () => {
+    isConnected = false;
+    setConnected(false, true);
+  });
+  socket.on('command_executed', d => {
+    const names = {
+      next_slide:'شريحة تالية ⏭️', prev_slide:'شريحة سابقة ⏮️',
+      volume_up:'رفع الصوت 🔊', volume_down:'خفض الصوت 🔉',
+      play_pause:'تشغيل/إيقاف ⏸️', mute:'كتم الصوت 🔇',
+      fullscreen:'شاشة كاملة 🖥️', screenshot:'لقطة شاشة 📸',
+      start_presentation:'بدء العرض ▶️', end_presentation:'إنهاء العرض ⏹️',
+      zoom_in:'تكبير 🔍', zoom_out:'تصغير 🔎'
+    };
+    showToast(names[d.action] || d.action);
+  });
+  socket.on('status', d => showToast(d.message));
+}
+
+function setConnected(ok, partial = false) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  const btn = document.getElementById('connectBtn');
+  if (ok) {
+    dot.className = 'conn-dot connected';
+    txt.textContent = 'متصل ✓';
+    btn.className = 'connect-btn connected-state';
+    btn.innerHTML = '<i class="fas fa-check"></i> متصل';
+  } else if (partial) {
+    dot.className = 'conn-dot error';
+    txt.textContent = 'انقطع الاتصال';
+    btn.className = 'connect-btn';
+    btn.innerHTML = '<i class="fas fa-rotate"></i> إعادة';
+  } else {
+    dot.className = 'conn-dot';
+    txt.textContent = 'غير متصل';
+    btn.className = 'connect-btn';
+    btn.innerHTML = '<i class="fas fa-link"></i> ربط';
+  }
+}
+
+// ═════════════════════════════════════════
+//  SEND COMMAND
+// ═════════════════════════════════════════
+async function sendCmd(action) {
+  if (!serverUrl && !isConnected) {
+    showToast('ربط الجهاز أولاً!', true);
+    return;
+  }
+
+  // Button feedback
+  pulseFeedback(action);
+
+  try {
+    if (isConnected && socket && socket.connected) {
+      socket.emit('command', { action });
+    } else {
+      const res = await fetch(`http://${serverUrl}/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+        signal: AbortSignal.timeout(4000)
+      });
+      if (!res.ok) throw new Error('Server error');
+      const names = {
+        next_slide:'شريحة تالية', prev_slide:'شريحة سابقة',
+        volume_up:'رفع الصوت', volume_down:'خفض الصوت',
+        play_pause:'تشغيل/إيقاف', mute:'كتم الصوت',
+        fullscreen:'شاشة كاملة', screenshot:'لقطة شاشة',
+        start_presentation:'بدء العرض', end_presentation:'إنهاء العرض',
+        zoom_in:'تكبير', zoom_out:'تصغير'
+      };
+      showToast(names[action] || action);
+    }
+  } catch (e) {
+    showToast('تعذر إرسال الأمر', true);
+  }
+}
+
+// ═════════════════════════════════════════
+//  VISUAL FEEDBACK
+// ═════════════════════════════════════════
+function pulseFeedback(action) {
+  const map = {
+    next_slide: 'btn-next', prev_slide: 'btn-prev',
+    volume_up: 'btn-vup', volume_down: 'btn-vdown', play_pause: 'btn-play'
+  };
+  const id = map[action];
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.transform = 'scale(.92)';
+  setTimeout(() => { el.style.transform = ''; }, 180);
+}
+
+// ═════════════════════════════════════════
+//  SWIPE GESTURES
+// ═════════════════════════════════════════
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = Date.now();
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  // Skip if touch was on a button
+  if (e.target.closest('button, input')) return;
+
+  const dx = touchStartX - e.changedTouches[0].clientX;
+  const dy = Math.abs(touchStartY - e.changedTouches[0].clientY);
+  const dt = Date.now() - touchStartTime;
+
+  if (Math.abs(dx) > 70 && dy < 80 && dt < 600) {
+    const cmd = dx > 0 ? 'next_slide' : 'prev_slide';
+    sendCmd(cmd);
+    showSwipeOverlay(dx > 0 ? '▶▶' : '◀◀');
+  }
+}, { passive: true });
+
+function showSwipeOverlay(icon) {
+  const o = document.getElementById('swipeOverlay');
+  const i = document.getElementById('swipeIcon');
+  i.textContent = icon;
+  o.classList.add('show');
+  setTimeout(() => o.classList.remove('show'), 600);
+}
+
+// ═════════════════════════════════════════
+//  KEYBOARD (for desktop use)
+// ═════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const map = {
+    'ArrowRight': 'next_slide', 'ArrowLeft': 'prev_slide',
+    'ArrowUp': 'volume_up', 'ArrowDown': 'volume_down',
+    ' ': 'play_pause', 'm': 'mute', 'f': 'fullscreen'
+  };
+  if (e.key === ' ') e.preventDefault();
+  if (map[e.key]) sendCmd(map[e.key]);
+});
+
+// ═════════════════════════════════════════
+//  ENTER KEY TO CONNECT
+// ═════════════════════════════════════════
+document.getElementById('serverIp').addEventListener('keypress', e => {
+  if (e.key === 'Enter') connectServer();
+});
+
+// ═════════════════════════════════════════
+//  INIT — Load saved IP
+// ═════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = localStorage.getItem('remote_last_ip');
+    const input = document.getElementById('serverIp');
+    // Only use saved if input wasn't already set by auto-detect
+    if (saved && !input.value) input.value = saved;
+    // If auto-connected (served from Flask), try connecting
+    if (input.value && window.location.protocol !== 'file:') {
+      connectServer();
+    }
+  } catch(e) {}
+});
+
+console.log('%c🎮 Remote Pro v4.0 ', 'background:linear-gradient(135deg,#00ff88,#00ccff);color:#000;padding:8px 16px;border-radius:8px;font-weight:bold');
+</script>
+</body>
+</html>
